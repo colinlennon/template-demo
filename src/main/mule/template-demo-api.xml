@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule
+	xmlns:json-logger="http://www.mulesoft.org/schema/mule/json-logger"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:anypoint-mq="http://www.mulesoft.org/schema/mule/anypoint-mq"
+	xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd  http://www.mulesoft.org/schema/mule/anypoint-mq http://www.mulesoft.org/schema/mule/anypoint-mq/current/mule-anypoint-mq.xsd
+http://www.mulesoft.org/schema/mule/json-logger http://www.mulesoft.org/schema/mule/json-logger/current/mule-json-logger.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config
+		name="api-httpsListenerConfig">
+		<http:listener-connection host="0.0.0.0"
+			port="${listener.port}" protocol="HTTPS" tlsContext="ApiTLSContext" />
+	</http:listener-config>
+	<apikit:config name="template-demo-config"
+		api="resource::b3cefab8-d545-43a2-9cda-820588bd3576:rest-api-template-spec:1.0.1:raml:zip:api.raml"
+		outboundHeadersMapName="outboundHeaders"
+		httpStatusVarName="httpStatus" />
+	<flow name="template-demo-main">
+		<http:listener config-ref="api-httpsListenerConfig"
+			path="/api/*">
+			<http:response
+				statusCode="#[vars.httpStatus default 200]">
+				<http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+			</http:response>
+			<http:error-response
+				statusCode="#[vars.httpStatus default 500]">
+				<http:body><![CDATA[#[payload]]]></http:body>
+				<http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+			</http:error-response>
+		</http:listener>
+		<ee:transform doc:name="Exctract variables for JSON logger from payload" doc:id="accd1a9c-b953-4ddc-8d41-1f22856791c6">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="testResultType"><![CDATA[%dw 2.0
+output application/java
+---
+"Positive"]]></ee:set-variable>
+				<ee:set-variable variableName="testResultSpecimenId"><![CDATA[%dw 2.0
+output application/java
+---
+payload.testRecord.registration.labSubmission.testResult.specimenID]]></ee:set-variable>
+				<ee:set-variable variableName="testPillarType" ><![CDATA[%dw 2.0
+output application/java
+---
+Mule::p('app.pillar')]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="initialise-message-meta-data-sub-flow"
+			doc:id="ea9e32d8-caab-43f2-bd2b-55cc1594b180"
+			name="initialise-message-meta-data-sub-flow" />
+		<json-logger:logger doc:name="Application Log - Before APIkit Router"
+			doc:id="b9124dbc-51d1-4948-868f-6c9c9fac8f19"
+			config-ref="JSON_Logger_Anypoint_Application_Log_Config"
+			message="Audit Log before APIkit"
+			category="${log.category.application}" printLog="true" priority="DEBUG"/>
+		<apikit:router config-ref="template-demo-config" />
+		<error-handler>
+			<on-error-propagate enableNotifications="true"
+				logException="true" doc:name="On Error Propagate"
+				doc:id="407975fe-792a-4c51-8412-615e91aaea7b">
+				<flow-ref doc:name="Flow Reference"
+					doc:id="97dc5283-3839-4f45-800e-800e044a58d3"
+					name="error-mainErrorHandlerFlow" />
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="get:ping:template-demo-config">
+		<flow-ref doc:name="get-ping-impl"
+			doc:id="7fc7fb31-61d0-4132-93b8-e5d91d66ef7b" name="get-ping-impl" />
+	</flow>
+</mule>

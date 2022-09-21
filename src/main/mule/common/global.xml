@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule
+	xmlns:anypoint-mq="http://www.mulesoft.org/schema/mule/anypoint-mq"
+	xmlns:json-logger="http://www.mulesoft.org/schema/mule/json-logger"
+	xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties"
+	xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit"
+	xmlns:tls="http://www.mulesoft.org/schema/mule/tls"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:api-gateway="http://www.mulesoft.org/schema/mule/api-gateway"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd 
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd 
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd 
+http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/mule/api-gateway/current/mule-api-gateway.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd
+http://www.mulesoft.org/schema/mule/json-logger http://www.mulesoft.org/schema/mule/json-logger/current/mule-json-logger.xsd
+http://www.mulesoft.org/schema/mule/anypoint-mq http://www.mulesoft.org/schema/mule/anypoint-mq/current/mule-anypoint-mq.xsd">
+
+	<configuration doc:name="Global Default Error Handler Configuration" doc:id="ec715fb0-0ea7-4ad2-8ec3-3a55581fc830" 
+	defaultErrorHandler-ref="default-error-handlerError_Handler" />
+	
+	<api-gateway:autodiscovery apiId="${api.id}" 
+		ignoreBasePath="true" 
+		doc:name="API Autodiscovery" 
+		doc:id="e9f00f8c-9075-4e11-ac03-31b459d4ad25" 
+		flowRef="template-demo-main" />
+		
+	<tls:context name="ApiTLSContext">
+		<tls:key-store type="${tls.keystore.type}"
+			path="${tls.keystore.path}"
+			password="${tls.keystore.password}"
+			keyPassword="${tls.keystore.password}"
+			alias="${tls.keystore.alias}" />
+	</tls:context>
+
+	<api-gateway:autodiscovery apiId="${api.id}"
+		flowRef="template-demo-main" ignoreBasePath="true" />
+
+	<configuration-properties
+		file="properties/${mule.env}-properties.yaml"
+		doc:name="Env Config Props" />
+
+	<configuration-properties
+		file="properties/common-properties.yaml" doc:name="Common Config Props" />
+
+	<configuration-properties
+		doc:name="Error Config Prop"
+		doc:id="632969a9-6043-4ab8-bc32-fb39deac3c3a"
+		file="config/error-properties-template.yaml" />
+
+	<json-logger:config
+		name="JSON_Logger_Anypoint_Debug_Log_Config" doc:name="JSON Logger Config"
+		doc:id="2a0e11c9-663d-418e-8555-1610bc6cb8d0"
+		applicationName="${app.name}" applicationVersion="${app.version}"
+		environment="${mule.env}" disabledFields="content" />
+
+	<json-logger:config
+		name="JSON_Logger_Anypoint_Application_Log_Config" doc:name="JSON Logger Config"
+		doc:id="51b95ca3-3dc5-4265-9049-4c18e11708a1"
+		applicationName="${app.name}" applicationVersion="${app.version}"
+		environment="${mule.env}" disabledFields="content" />
+		
+	<json-logger:config
+		name="JSON_Logger_Error_Queue_Config" doc:name="JSON Logger Config"
+		doc:id="da4f3c97-7a34-468b-b419-7756b992b4a5"
+		environment="${mule.env}" applicationName="${app.name}"
+		applicationVersion="${app.version}">
+		<json-logger:external-destination>
+			<json-logger:amq-destination
+				queueOrExchangeDestination="${amq.error-queue.name}"
+				url="${amq.url}" clientId="${amq.app.ca-id}"
+				clientSecret="${amq.app.ca-secret}" />
+		</json-logger:external-destination>
+	</json-logger:config>
+
+	<json-logger:config
+		name="JSON_Logger_Config_Business_Audit_log_with_payload"
+		doc:name="JSON Logger Config"
+		doc:id="d991da09-211e-4b6d-9020-e719a69f873c"
+		applicationName="${app.name}" applicationVersion="${app.version}"
+		environment="${mule.env}">
+		<json-logger:external-destination>
+			<json-logger:amq-destination
+				queueOrExchangeDestination="${amq.logs-queue.name}"
+				url="${amq.url}" clientId="${amq.app.ca-id}"
+				clientSecret="${amq.app.ca-secret}" />
+		</json-logger:external-destination>
+	</json-logger:config>
+
+	<json-logger:config
+		name="JSON_Logger_Config_Business_Audit_log_without_payload"
+		doc:name="JSON Logger Config"
+		doc:id="e6993835-618e-46e9-a68e-0391e0b45b53"
+		applicationName="${app.name}" applicationVersion="${app.version}"
+		environment="${mule.env}" disabledFields="content">
+		<json-logger:external-destination>
+			<json-logger:amq-destination
+				queueOrExchangeDestination="${amq.logs-queue.name}"
+				url="${amq.url}" clientId="${amq.app.ca-id}"
+				clientSecret="${amq.app.ca-secret}" />
+		</json-logger:external-destination>
+	</json-logger:config>
+	
+</mule>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule
+	xmlns:json-logger="http://www.mulesoft.org/schema/mule/json-logger"
+	xmlns:anypoint-mq="http://www.mulesoft.org/schema/mule/anypoint-mq"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/anypoint-mq http://www.mulesoft.org/schema/mule/anypoint-mq/current/mule-anypoint-mq.xsd
+http://www.mulesoft.org/schema/mule/json-logger http://www.mulesoft.org/schema/mule/json-logger/current/mule-json-logger.xsd">
+	<flow name="get-ping-impl"
+		doc:id="e3349565-1c20-4aa1-abb5-48c3780a5ace">
+		<json-logger:logger doc:name="Debug Logger - Flow Start" doc:id="e3330eb8-5e4f-4fae-977e-1b8314391569" config-ref="JSON_Logger_Anypoint_Debug_Log_Config" message="Flow Start - get-ping-impl" priority="DEBUG" printLog="true" category="${log.category.debug}"/>
+		<ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd" doc:name="Health check Message">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  message: " - service is up and running..",
+  version: "V1",
+  servertime: now(),
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<json-logger:logger doc:name="Debug Logger - Flow End" doc:id="be86cfeb-083b-4f6a-8ab5-b6a9a947fe2e" config-ref="JSON_Logger_Anypoint_Debug_Log_Config" message="Flow Ends - get-ping-impl" priority="DEBUG" printLog="true" category="${log.category.debug}" />
+<!-- 		<flow-ref doc:name="amq-publish-message-sub-flow"
+			doc:id="90482931-7a47-4ac2-a3cd-e17ecf0f9da8"
+			name="amq-publish-message-sub-flow" /> -->
+	</flow>
+</mule>

@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<!-- Parent-Pom(and Bom) from Exchange -->
+	<parent>
+		<groupId>4662d833-1567-4253-b115-eb71a03c7051</groupId>
+		<artifactId>solutions-parent-pom</artifactId>
+		<version>0.0.4</version>
+	</parent>
+
+	<groupId>4662d833-1567-4253-b115-eb71a03c7051</groupId>
+	<artifactId>template-demo-impl</artifactId>
+	<version>0.0.1</version>
+	<packaging>mule-application</packaging>
+
+	<!-- TODO: Ensure this matches with project name and description -->
+	<name>mule4-rest-api-template-1.0.22-mule-application-template</name>
+	<description>REST API Template for experience, process, and System APIs</description>
+
+	<properties>
+		<!-- TODO: Update this to appropriate layer (eapi/papi/sapi) -->
+		<api.layer>${api.layer.eapi}</api.layer>
+		<!-- TODO: Ensure correct runtime version -->
+		<app.runtime>4.3.0-20211026</app.runtime>
+
+		<error.handler.library.version>1.0.17</error.handler.library.version>
+		<message.metadata.library.version>1.0.8</message.metadata.library.version>
+		<orgid>b3cefab8-d545-43a2-9cda-820588bd3576</orgid>
+		<mule.maven.plugin.version>3.5.4</mule.maven.plugin.version>
+	</properties>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.mule.tools.maven</groupId>
+				<artifactId>mule-maven-plugin</artifactId>
+				<version>${mule.maven.plugin.version}</version>
+				<configuration>
+					<classifier>mule-application</classifier>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>com.mulesoft.munit.tools</groupId>
+				<artifactId>munit-maven-plugin</artifactId>
+				<version>${munit.version}</version>
+				<executions>
+					<execution>
+						<id>test</id>
+						<phase>test</phase>
+						<goals>
+							<goal>test</goal>
+							<goal>coverage-report</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<runtimeVersion>${app.runtime}</runtimeVersion>
+					<runtimeProduct>MULE_EE</runtimeProduct>
+					<coverage>
+						<runCoverage>true</runCoverage>
+						<formats>
+							<format>console</format>
+							<format>html</format>
+							<format>json</format>
+						</formats>
+						<requiredApplicationCoverage>70</requiredApplicationCoverage>
+						<requiredResourceCoverage>80</requiredResourceCoverage>
+						<requiredFlowCoverage>70</requiredFlowCoverage>
+						<ignoreFiles>
+							<ignoreFile>error-handler/error-amq.xml</ignoreFile>
+							<ignoreFile>error-handler/error-apikit.xml</ignoreFile>
+							<ignoreFile>error-handler/error-business.xml</ignoreFile>
+							<ignoreFile>error-handler/error-db.xml</ignoreFile>
+							<ignoreFile>error-handler/error-default.xml</ignoreFile>
+							<ignoreFile>error-handler/error-file.xml</ignoreFile>
+							<ignoreFile>error-handler/error-handler.xml</ignoreFile>
+							<ignoreFile>error-handler/error-http.xml</ignoreFile>
+							<ignoreFile>error-handler/error-jms.xml</ignoreFile>
+							<ignoreFile>error-handler/error-rest-validator.xml</ignoreFile>
+							<ignoreFile>error-handler/error-technical.xml</ignoreFile>
+							<ignoreFile>error-handler/error-wsc.xml</ignoreFile>
+						</ignoreFiles>
+					</coverage>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${maven.compiler.plugin.version}</version>
+				<configuration>
+					<compilerArgs>
+						<args>-parameters</args>
+					</compilerArgs>
+					<target>1.8</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<version>${maven.dependency.plugin.version}</version>
+				<executions>
+					<execution>
+						<id>unpack</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>unpack</goal>
+						</goals>
+						<configuration>
+							<artifactItems>
+								<!-- Error Handler Library Artifacts -->
+								<artifactItem>
+									<groupId>${orgid}</groupId>
+									<artifactId>error-handler-library</artifactId>
+									<version>${error.handler.library.version}</version>
+									<classifier>mule-application</classifier>
+									<overWrite>true</overWrite>
+									<outputDirectory>src/main/mule/</outputDirectory>
+									<includes>**/error-handler/error-*.xml</includes>
+								</artifactItem>
+								<artifactItem>
+									<groupId>${orgid}</groupId>
+									<artifactId>error-handler-library</artifactId>
+									<version>${error.handler.library.version}</version>
+									<classifier>mule-application</classifier>
+									<overWrite>true</overWrite>
+									<outputDirectory>src/main/resources/</outputDirectory>
+									<includes>**/error-*.yaml</includes>
+								</artifactItem>
+								<!-- Message Mata-Data Enricher Library Artifacts -->
+								<artifactItem>
+									<groupId>${orgid}</groupId>
+									<artifactId>message-meta-data-enricher-library</artifactId>
+									<version>${message.metadata.library.version}</version>
+									<classifier>mule-application</classifier>
+									<overWrite>true</overWrite>
+									<outputDirectory>src/main/mule/</outputDirectory>
+									<includes>**/*-enricher.xml</includes>
+								</artifactItem>
+							</artifactItems>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.mule.connectors</groupId>
+			<artifactId>mule-http-connector</artifactId>
+			<classifier>mule-plugin</classifier>
+		</dependency>
+		<dependency>
+			<groupId>org.mule.modules</groupId>
+			<artifactId>mule-apikit-module</artifactId>
+			<classifier>mule-plugin</classifier>
+		</dependency>
+		<dependency>
+			<groupId>org.mule.modules</groupId>
+			<artifactId>mule-validation-module</artifactId>
+			<classifier>mule-plugin</classifier>
+		</dependency>
+		<dependency>
+			<groupId>org.mule.connectors</groupId>
+			<artifactId>mule-sockets-connector</artifactId>
+			<classifier>mule-plugin</classifier>
+		</dependency>
+		<dependency>
+			<groupId>org.mule.module</groupId>
+			<artifactId>mule-java-module</artifactId>
+			<classifier>mule-plugin</classifier>
+		</dependency>
+
+		<!-- Connectors -->
+		<dependency>
+			<groupId>${orgid}</groupId>
+			<artifactId>json-logger</artifactId>
+			<version>${json.logger.ver}</version>
+			<classifier>mule-plugin</classifier>
+		</dependency>
+		<dependency>
+			<groupId>com.mulesoft.connectors</groupId>
+			<artifactId>anypoint-mq-connector</artifactId>
+			<version>${anypoint-mq-connector.version}</version>
+			<classifier>mule-plugin</classifier>
+		</dependency>
+
+		<!-- MUNIT -->
+		<dependency>
+			<groupId>com.mulesoft.munit</groupId>
+			<artifactId>munit-runner</artifactId>
+			<classifier>mule-plugin</classifier>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.mulesoft.munit</groupId>
+			<artifactId>munit-tools</artifactId>
+			<classifier>mule-plugin</classifier>
+			<scope>test</scope>
+		</dependency>
+
+
+		<dependency>
+                    <groupId>4662d833-1567-4253-b115-eb71a03c7051</groupId>
+                    <artifactId>template-demo</artifactId>
+                    <version>1.0.2</version>
+                    <classifier>raml</classifier>
+                    <type>zip</type>
+                </dependency>
+		
+	</dependencies>
+	
+
+	<repositories>
+		<!-- Repository where rest-api-template spec published -->		
+		<repository>
+			<id>anypoint-exchange-v3</id>
+			<name>Anypoint Exchange V3</name>
+			<url>https://maven.anypoint.mulesoft.com/api/v3/maven</url>
+			<layout>default</layout>
+		</repository>
+	</repositories>
+</project>

@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule
+	xmlns:json-logger="http://www.mulesoft.org/schema/mule/json-logger"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/json-logger http://www.mulesoft.org/schema/mule/json-logger/current/mule-json-logger.xsd">
+	<flow name="error-mainErrorHandlerFlow"
+		doc:id="d5caea74-9fd1-466e-8570-9457edde783e">
+		<set-variable
+			value="#[if (isEmpty(vars.category)) Mule::p('log.category.error') else vars.category]"
+			doc:name="Set category" doc:id="de0f680b-351a-4266-83e5-17a4d10ad56d"
+			variableName="category" />
+		<flow-ref doc:name="error-handler-before-errorTypeFlow"
+			doc:id="057343d3-76e0-4f98-8b2f-928c5768b5c0"
+			name="error-handler-before-errorTypeFlow" />
+		<flow-ref doc:name="error-handler-route-errorTypeFlow"
+			doc:id="2f402ef2-831f-4d8c-832c-7cf873595195"
+			name="error-handler-route-errorTypeFlow" />
+		<flow-ref doc:name="error-handler-after-errorTypeFlow"
+			doc:id="998cc004-7065-4589-af3d-6f65cad3c943"
+			name="error-handler-after-errorTypeFlow" />
+	</flow>
+
+	<flow name="error-handler-before-errorTypeFlow"
+		doc:id="4dc66ef0-2479-402b-a228-a3bb1c2a29eb">
+		<choice doc:name="Override or Log Payload?"
+			doc:id="71d15c48-8e2d-45a9-a234-2ff2ae52de2d">
+			<when
+				expression="#[Mule::p('errors.override.payload') == 'true']">
+				<ee:transform doc:name="Override Payload Logging"
+					doc:id="f2b3ffba-eba4-44fe-a495-dddbc14700c1">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+Mule::lookup('CustomErrorPayloadLog', {}, 120000)]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<when expression="#[Mule::p('errors.payload.log') == 'false']">
+				<json-logger:logger doc:name="Debug Logger"
+					doc:id="8332de38-8248-464b-a48e-1b7855223f78"
+					config-ref="JSON_Logger_Anypoint_Debug_Log_Config" priority="DEBUG"
+					category="${log.category.debug}"
+					message='#["Debug Logger - Payload Logging Disabled"]'>
+					<json-logger:content><![CDATA[#["Payload Logging Disabled"]]]></json-logger:content>
+				</json-logger:logger>
+			</when>
+			<otherwise>
+				<json-logger:logger doc:name="Logger" doc:id="5a81f09e-36e3-4a70-ac7c-2f104f7723d8" config-ref="JSON_Logger_Error_Queue_Config" message="In error-handler-before-errorTypeFlow" tracePoint="EXCEPTION" category="#[vars.category]" priority="ERROR" eventPoint='#["Error Payload Logger"]' printLog="false">
+			<json-logger:content><![CDATA[#[output application/json 
+
+---
+{
+    payload: payload default ""
+}]]]></json-logger:content>
+				</json-logger:logger>
+			</otherwise>
+		</choice>
+		<ee:transform doc:name="Set generic variables"
+			doc:id="2cb59536-e362-40b0-bd94-380539e471b5">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="errorNamespace"><![CDATA[%dw 2.0
+output application/java
+---
+error.errorType.namespace default ""]]></ee:set-variable>
+				<ee:set-variable variableName="errorIdentifier"><![CDATA[%dw 2.0
+output application/java
+---
+error.errorType.identifier default ""]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+	</flow>
+	<flow name="error-handler-route-errorTypeFlow"
+		doc:id="f5472532-0742-4101-811e-48525006c054">
+		<json-logger:logger doc:name="Debug Logger"
+			doc:id="0dd16a02-8db4-4c6f-94d2-d5fa620bb84f"
+			config-ref="JSON_Logger_Anypoint_Debug_Log_Config"
+			message="In error-handler-route-errorTypeFlow" tracePoint="EXCEPTION"
+			priority="DEBUG" printLog="true" category="${log.category.debug}"
+			eventPoint='#["Logger before error handler routing"]' />
+		<ee:transform
+			doc:name="Route to respective error handler based on error type"
+			doc:id="dc10ac33-53e4-4947-b010-e288beec037e">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="flowName"><![CDATA[%dw 2.0
+output application/java
+var namespace = {
+				 'TECHNICAL':'ErrorHandlerTechnical',
+				 'BUSINESS':'ErrorHandlerBusiness',
+				 'HTTP':'ErrorHandlerHttp',
+				 'FILE':'ErrorHandlerFile',
+				 'JMS':'ErrorHandlerJms',
+				 'WSC':'ErrorHandlerWSC',
+				 'APIKIT':'ErrorHandlerApiKit',
+				 'REST-VALIDATOR':'ErrorHandlerRestValidator',
+				 'DB':'ErrorHandlerDB',
+				 'ANYPOINT-MQ': 'ErrorHandlerAMQ'
+				 }			 			 
+
+var errorNamespace = 
+    if (!isEmpty(error) and 
+    error.errorType? and 
+    error.errorType.namespace? and 
+    !isBlank(error.errorType.namespace))
+        error.errorType.namespace
+    else ""
+
+var errorHandlerFlow = if(namespace[errorNamespace] != null) namespace[errorNamespace] else 'ErrorHandlerDefault'
+ 
+---
+//if(!isBlank(errorHandlerFlow)) Mule::lookup(errorHandlerFlow, {},120000) else ""
+errorHandlerFlow]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="Call Respective Flow"
+			doc:id="ba64fb76-97b5-4d8f-82f4-3d67b0569631" name="#[vars.flowName]" />
+	</flow>
+	<flow name="error-handler-after-errorTypeFlow"
+		doc:id="4f0f09c0-86e0-49af-b823-6f8c57b2f221">
+		<json-logger:logger doc:name="Debug Logger"
+			doc:id="8721dd31-aaec-48c7-a42e-b17526ccab77"
+			config-ref="JSON_Logger_Anypoint_Debug_Log_Config"
+			message="In error-handler-after-errorTypeFlow" tracePoint="EXCEPTION"
+			priority="DEBUG" printLog="true" category="${log.category.debug}"
+			eventPoint='#["Logger before Propagate error choice"]' />
+		<choice doc:name="Propagate error?"
+			doc:id="ec89ab74-3d9c-4ec7-9f0e-097eba6d3d3b">
+			<when
+				expression='#[error.errorMessage.attributes.Headers."content-type" == "application/json" and error.errorMessage.payload.errorcode != null]'>
+				<choice doc:name="Choice"
+					doc:id="cfd1df22-ab49-4b48-8431-30263d9bbc46">
+					<when
+						expression="#[Mule::p('errors.override.http') == 'true']">
+						<ee:transform
+							doc:name="Override Standard Error Response"
+							doc:id="6c11f93d-3014-4d24-ac7c-359f97bacc38">
+							<ee:message>
+								<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+Mule::lookup('CustomHTTPErrorHandlerResponse', {}, 120000)]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+					</when>
+					<otherwise>
+						<ee:transform doc:name="Set httpStatus"
+							doc:id="74c0be34-76c7-46cf-83d3-5086766b2ade">
+							<ee:message>
+							</ee:message>
+							<ee:variables>
+								<ee:set-variable variableName="httpStatus"><![CDATA[%dw 2.0
+output application/java
+---
+error.errorMessage.payload.status default ""]]></ee:set-variable>
+							</ee:variables>
+						</ee:transform>
+						<set-payload value="#[error.errorMessage.payload]"
+							doc:name="Set Payload"
+							doc:id="c40fab81-d7e4-4a03-879e-2d4a4f0d70d6" />
+					</otherwise>
+				</choice>
+			</when>
+			<otherwise>
+				<ee:transform
+					doc:name="Set httpStatus and errorMessage"
+					doc:id="006f0bb2-e7e9-40bc-985f-fc9f40b15423">
+					<ee:message>
+					</ee:message>
+					<ee:variables>
+						<ee:set-variable variableName="httpStatus"><![CDATA[%dw 2.0
+output application/java
+---
+payload.httpStatus default ""]]></ee:set-variable>
+						<ee:set-variable variableName="errorMessage"><![CDATA[%dw 2.0
+output application/java
+---
+payload.errorMessage default ""]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+				<flow-ref doc:name="error-handler-override-errorFlow"
+					doc:id="bff2f876-16e6-48bd-b3ba-6a527446246a"
+					name="error-handler-override-errorFlow" />
+			</otherwise>
+		</choice>
+	</flow>
+	<flow name="error-handler-override-errorFlow"
+		doc:id="f7701e43-10bc-4f64-97f0-b5967c36253f">
+		<json-logger:logger doc:name="Debug Logger"
+			doc:id="6915401c-c8e4-47ad-b785-a28a53ccb575"
+			config-ref="JSON_Logger_Anypoint_Debug_Log_Config"
+			message="In error-handler-extension-errorFlow" tracePoint="EXCEPTION"
+			priority="DEBUG" printLog="true" category="${log.category.debug}"
+			eventPoint='#["Logger before override std final error reponse"]' />
+		<choice doc:name="Override Standard Final Error Response?"
+			doc:id="a73f6d0f-baf2-40b1-894e-2116c2aefaa7">
+			<when
+				expression="#[Mule::p('errors.override.response') == 'true']">
+				<ee:transform
+					doc:name="Override Standard Error Response"
+					doc:id="7da8f887-a0f4-487c-afd5-8d4cd1c8373a">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+Mule::lookup('CustomErrorHandlerResponse', {}, 120000)]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise>
+				<ee:transform doc:name="Standard Final Error Response"
+					doc:id="7430adac-1a62-4f2e-8617-cd4c797a4bcb">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	Element: error.cause.info.Element,
+    ElementDSL: error.cause.info."Element DSL",
+    flowName: error.cause.info.FlowStack.elements.flowName,
+	errorcode: vars.httpStatus,
+	layer: Mule::p('app.layer'),
+	errorMessage: vars.errorMessage,
+	detail: error.detailedDescription,
+	description: error.description,
+	errortype: error.errorType.identifier,
+	correlationid: correlationId,	
+	referenceid: uuid()
+}
+ ]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<json-logger:logger doc:name="Logger"
+					doc:id="478b9a8d-3f3b-45f5-911c-aa72cd437453"
+					config-ref="JSON_Logger_Error_Queue_Config"
+					message="Default error log" tracePoint="EXCEPTION"
+					category="${log.category.error}" priority="ERROR"
+					eventPoint='#["Error Details Logger"]' printLog="false">
+					<json-logger:content><![CDATA[#[output application/json 
+---
+{
+    payload: payload
+}]]]></json-logger:content>
+				</json-logger:logger>
+				<ee:transform doc:name="Transform Message"
+					doc:id="54e987c2-396b-41ff-8af5-9f5080339754">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+		errorcode: payload.errorcode,
+		errortype: payload.errortype,
+		errormessage:  payload.errorMessage default "System error",
+		correlationid: payload.correlationid,
+		referenceid: payload.referenceid,
+		timestamp: now() as DateTime{format: "yyyy-MM-dd'T'HH:mm:ss.SSSX"}  >> "UTC"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+		<ee:transform doc:name="FInal JSON response"
+			doc:id="48396119-16e3-4444-ad19-5c6251a8ca25">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>

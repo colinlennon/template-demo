@@ -1,1 +1,1 @@
-# template-demo
+# mule4-rest-api-template

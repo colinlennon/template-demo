@@ -1,0 +1,13 @@
+api:
+  id:           "0000000"
+
+correlation:
+  impose: "false"  
+        
+amq:
+  error-queue:
+    name: "q-dv-rtts-app-errors"
+  logs-queue:
+    name: "q-dv-rtts-app-logs"
+
+  

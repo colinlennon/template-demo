@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule
+	xmlns:anypoint-mq="http://www.mulesoft.org/schema/mule/anypoint-mq"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/anypoint-mq http://www.mulesoft.org/schema/mule/anypoint-mq/current/mule-anypoint-mq.xsd">
+	<sub-flow name="initialise-message-meta-data-sub-flow"
+		doc:id="f192206c-b65c-4f34-8b21-20b2fead6eba">
+		<ee:transform doc:name="Set Variable-messageMetaData"
+			doc:id="81693cae-2b3e-46a4-8bb8-f189e2cc985c">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="messageMetaData"><![CDATA[%dw 2.0
+output application/json skipNullOn="everywhere"
+
+var vmd = vars.messageMetaData
+
+//assign appropriate attributes
+var att = 
+	//if incoming user properties not null - for AMQ messages
+	if ( attributes.properties != null ) attributes.properties
+	//else if HTTP headers not null - for HTTP requests
+	else if ( attributes.headers != null ) attributes.headers
+	else null
+	
+var appLayer = Mule::p('app.rtts.layer')
+
+var sourceChannel = if(appLayer == "Ingress") vars.testResultSource default Mule::p('app.source.channel')  
+					else if ( vmd.sourceChannel != null ) vmd.sourceChannel 
+					else if ( att.sourceChannel !=null ) att.sourceChannel
+					else Mule::p('app.source.channel')
+					
+var targetSystem = 	if(appLayer == "Egress") vars.testResultTarget default Mule::p('app.target.system')
+					else if ( vmd.targetSystem != null ) vmd.targetSystem 
+					else if ( att.targetSystem !=null ) att.targetSystem 
+					else Mule::p('app.target.system')
+					
+var resultSpecimenId = 	if ( vmd.testResultSpecimenId != null ) vmd.testResultSpecimenId 
+						else if ( att.testResultSpecimenId !=null ) att.testResultSpecimenId 
+						else vars.testResultSpecimenId	
+						
+var pillarType = if ( vmd.testPillarType != null ) vmd.testPillarType 
+				 else if ( att.testPillarType !=null ) att.testPillarType 
+				 else vars.testPillarType	
+
+// ****** Source Channel as Json based on Pillar at Ingress
+var pillarList = Mule::p('app.ingress.sourcechannel.override.pillar.list') splitBy(',') map (trim($)) default []
+var sourceChannelOverrideRequired = !isEmpty(pillarList find trim(pillarType))					
+var sourceChannelJson = if (appLayer == "Ingress" and (sourceChannelOverrideRequired)) 
+{
+	"channelName": sourceChannel,
+	"apiRoute": vars.apiRoute default Mule::p('app.source.apiRoute'),
+	"labId": vars.labId default Mule::p('app.ingress.default.lab.id')
+} 	
+else ""
+var sourceChannelVal = if (!isEmpty(sourceChannelJson))
+						 write(sourceChannelJson, "application/json", {skipNullOn:"objects"}) 
+					   else sourceChannel
+// ******************************************
+				 
+var resultType = if ( vmd.testResultType != null ) vmd.testResultType 
+				 else if ( att.testResultType !=null ) att.testResultType 
+				 else vars.testResultType
+				 	
+var timeStamp = if ( vmd.timestamp != null ) vmd.timestamp 
+				else if ( att.timestamp != null ) att.timestamp 
+				// First convert date to UTC and then transform to string
+				else (now() >> 'UTC') as String{format:"yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"}	
+				
+var rttsUid = if ( vmd.rttsUID != null ) vmd.rttsUID 
+			else if ( att.rttsUID != null ) att.rttsUID 
+			else uuid()				
+							 			 									
+---
+{
+	correlationId: correlationId,
+	rttsUID: rttsUid ,
+	rttsLayer: appLayer,
+	sourceChannel: sourceChannelVal,
+	targetSystem: targetSystem,	
+	testPillarType: pillarType,
+	testResultSpecimenId: resultSpecimenId,
+	testResultType: resultType,
+	timestamp: timeStamp,
+	application: app.name		
+}
+]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<ee:transform doc:name="Set variables for JSON Logger"
+			doc:id="5bb8b8e7-cc27-4313-9662-fffc69b199ed">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="rttsUniqueId"><![CDATA[%dw 2.0
+output application/java
+---
+vars.messageMetaData.rttsUID]]>
+				</ee:set-variable>
+				<ee:set-variable variableName="rttsLayer"><![CDATA[%dw 2.0
+output application/java
+---
+vars.messageMetaData.rttsLayer]]></ee:set-variable>
+				<ee:set-variable variableName="sourceChannel"><![CDATA[%dw 2.0
+output application/java
+---
+vars.messageMetaData.sourceChannel]]></ee:set-variable>
+				<ee:set-variable variableName="testPillarType"><![CDATA[%dw 2.0
+output application/java
+---
+vars.messageMetaData.testPillarType]]></ee:set-variable>
+				<ee:set-variable variableName="targetSystem"><![CDATA[%dw 2.0
+output application/java
+---
+vars.messageMetaData.targetSystem]]></ee:set-variable>
+				<ee:set-variable variableName="testResultSpecimenId"><![CDATA[%dw 2.0
+output application/java
+---
+vars.messageMetaData.testResultSpecimenId]]></ee:set-variable>
+				<ee:set-variable variableName="testResultType"><![CDATA[%dw 2.0
+output application/java
+---
+vars.messageMetaData.testResultType]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+
+	</sub-flow>
+	<sub-flow name="amq-format-message-user-properties-sub-flow"
+		doc:id="ff0d597b-bb66-479f-8a9c-47124db0107e">
+		<ee:transform doc:name="Format User Properties"
+			doc:id="d1954aa5-cddb-4328-b2dc-7b023f31a3d5">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="userProperties"><![CDATA[%dw 2.0
+output application/java
+---
+vars.messageMetaData
+++ if (vars.additionalUserProperties != null) vars.additionalUserProperties else {}
+]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+	</sub-flow>
+	<sub-flow name="remove-meta-data-variables-sub-flow"
+		doc:id="3aa8d157-3d36-4a19-bbc4-1414bb262ba1">
+		<remove-variable
+			doc:name="Remove Variable - messageMetaData"
+			doc:id="4c1e0d9c-58ab-45e2-b625-546930232eeb"
+			variableName="messageMetaData" />
+		<remove-variable
+			doc:name="Remove Variable - userProperties"
+			doc:id="7010d75d-3109-43ac-b540-5065027e2caf"
+			variableName="userProperties" />
+	</sub-flow>
+</mule>

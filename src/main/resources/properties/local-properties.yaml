@@ -1,0 +1,19 @@
+api:
+  id: "0000000"
+  
+tls.keystore:
+  type:         "pkcs12"  
+  path:         "cert/local-tls.p12"  # only for local run! Do not use for other environments 
+  alias:        "server" 
+  password:     "mule12345"           # only for local run! Do not use for other environments
+
+correlation:
+  impose: "false" 
+            
+amq: # Use credentials for DEV in your local Run Config - from either Anypoint MQ or the Secrets Manager
+  app.ca-id: "3d3758272e574344b2659668cf41d887"
+  error-queue:
+    name: "q-dv-rtts-app-errors"
+  logs-queue:
+    name: "q-dv-rtts-app-logs"
+    

@@ -1,0 +1,44 @@
+# Audit properties needed for the JSON logger 
+app:
+  name:             "${project.artifactId}"
+  version:          "${project.version}"
+  layer:            "EXP"                   # Values - EXP, PRC, SYS
+  rtts.layer:       ""                      # Values - Egress,Core,Ingress, Utility or Common
+  source:
+    channel:   ""                           # Set source only by Ingress apps. No other layer apps should set the source channel. Values - NPEX, CPS, DPS, Private Test etc
+    apiRoute:  ""                           # Set only by Ingress apps.
+  ingress:
+    sourcechannel.override.pillar.list: ""  # Set only by Ingress app when source channel required to be json string. Values - P2, P1&4, Private Test etc
+    default.lab.id: ""                      # Set only if required for default value in app.
+  pillar: ""                                # Set target only by Ingress apps. No other layer apps should set the value. Values - P2, P1&4, Private Test etc
+  target.system:    ""                      # Set target only by Egress apps. No other layer apps should set the target channel.
+    
+listener:
+  port:             "8092"
+  
+log:
+  category:
+    application:    "application_logs"
+    debug:          "debug_logs"
+    error:          "error_logs"
+    business:       "business_logs"
+    
+amq:
+  url: "https://mq-eu-west-2.anypoint.mulesoft.com/api/v1"
+  app:
+    ca-id: ""               # Set at deployment (value from Secrets Manager)
+    ca-secret: ""           # Set at deployment (value from Secrets Manager)
+
+tls:                        # Secret Manager will provide for all environmnets - dev, qa/qa2, uat, preprod, prod
+  keystore:
+    type: "pkcs12"
+    path: "cert/RTTS-Keystore.p12"
+    alias: "rtts"
+    password: ""            # Set at deployment (value from Secrets Manager)    
+    
+requester:
+  timeout: "600000"
+  
+untilsuccessful:
+   maxretries: "3"
+   interval: "2000"  
