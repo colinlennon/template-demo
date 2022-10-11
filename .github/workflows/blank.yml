@@ -38,6 +38,7 @@ jobs:
       - name: Run a multi-line script
         run: |
           POM_VERSION=$(mvn org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "POM_VERSION: $POM_VERSION"
           if [[ (echo $POM_VERSION | grep -e SNAPSHOT) && (github.event_name == 'pull_request')]]
           then
             echo "SNAPSHOT version detected."
