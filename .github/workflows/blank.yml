@@ -35,6 +35,6 @@ jobs:
             exit 1
           else
             echo "Do the tagging here"
-            #git tag $POM_VERSION
-            #git push origin --tags
+            # git tag $POM_VERSION
+            # git push origin --tags
           fi
