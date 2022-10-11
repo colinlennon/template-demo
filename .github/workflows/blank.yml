@@ -40,12 +40,12 @@ jobs:
           #POM_VERSION=$(mvn org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate -Dexpression=project.version -q -DforceStdout)
           POM_VERSION=1.0.0-SNAPSHOT
           echo "POM_VERSION: $POM_VERSION"
-          #if [[ (echo $POM_VERSION | grep -e SNAPSHOT) && (github.event_name == 'pull_request')]]
-          #then
-          #  echo "SNAPSHOT version detected."
-          #  exit 1
-          #else
-          #  echo "Do the tagging here"
-            # git tag $POM_VERSION
-            # git push origin --tags
-          #fi
+          if [[ (echo $POM_VERSION | grep -e SNAPSHOT) && (github.event_name == 'pull_request')]]
+          then
+            echo "SNAPSHOT version detected."
+            exit 1
+          else
+            echo "Do the tagging here"
+             git tag $POM_VERSION
+             git push origin --tags
+          fi
