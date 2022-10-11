@@ -25,19 +25,20 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
       
-      - name: Setup Java JDK
-        uses: actions/setup-java@v3.3.0
-        with:
-          distribution: 'temurin'
-          java-version: '11'
+      #- name: Setup Java JDK
+      #  uses: actions/setup-java@v3.3.0
+      #  with:
+      #    distribution: 'temurin'
+      #    java-version: '11'
        
-      - name: Set up Maven
-        uses: stCarolas/setup-maven@v4.3
+      #- name: Set up Maven
+      #  uses: stCarolas/setup-maven@v4.3
 
       # Runs a set of commands using the runners shell
       - name: Run a multi-line script
         run: |
-          POM_VERSION=$(mvn org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate -Dexpression=project.version -q -DforceStdout)
+          #POM_VERSION=$(mvn org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate -Dexpression=project.version -q -DforceStdout)
+          POM_VERSION=1.0.0-SNAPSHOT
           echo "POM_VERSION: $POM_VERSION"
           #if [[ (echo $POM_VERSION | grep -e SNAPSHOT) && (github.event_name == 'pull_request')]]
           #then
