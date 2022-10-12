@@ -56,6 +56,7 @@ jobs:
           
       - name: version-status-check
         uses: Sibz/github-status-action@v1
+        if: ${{ github.event_name == 'pull_request' }} && ${{ github.base_ref }} == 'main'
         with: 
           authToken: ${{secrets.GITHUB_TOKEN}}
           context: 'version-status-check'
