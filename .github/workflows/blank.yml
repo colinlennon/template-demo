@@ -43,14 +43,14 @@ jobs:
           then
             echo "SNAPSHOT version detected."
             # exit 1
-            echo "::set-output name=state::SNAPSHOT version detected"
-            echo "::set-output name=description::failure"
+            echo "::set-output name=state::failure"
+            echo "::set-output name=description::SNAPSHOT version detected"
           else
             echo "Do the tagging here"
             #git tag $POM_VERSION
             #git push origin --tags            
-            echo "::set-output name=state::Passed"
-            echo "::set-output name=description::success"
+            echo "::set-output name=state::success"
+            echo "::set-output name=description::Version is not a SNAPSHOT"
           fi
           
       - name: version-status-check
