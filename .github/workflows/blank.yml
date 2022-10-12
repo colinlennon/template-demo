@@ -21,8 +21,7 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
-      
+      - uses: actions/checkout@v3      
       - name: Setup Java JDK
         uses: actions/setup-java@v3.3.0
         with:
@@ -35,7 +34,7 @@ jobs:
       # Runs a set of commands using the runners shell
       - name: Verify version is not a SNAPSHOT
         id: check-version
-        if: ${{ github.event_name == 'pull_request' }} && ${{ github.base_ref }} == 'main'
+        if: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' }}
         run: |
           POM_VERSION=1.0.0-SNAPSHOT
           echo "POM_VERSION: $POM_VERSION"
@@ -44,19 +43,19 @@ jobs:
           then
             echo "SNAPSHOT version detected."
             # exit 1
-            echo "::set-output name=state::Passed"
-            echo "::set-output name=description::success"
+            echo "::set-output name=state::SNAPSHOT version detected"
+            echo "::set-output name=description::failure"
           else
             echo "Do the tagging here"
             #git tag $POM_VERSION
-            #git push origin --tags
-            echo "::set-output name=state::SNAPSHOT version detected"
-            echo "::set-output name=description::failure"
+            #git push origin --tags            
+            echo "::set-output name=state::Passed"
+            echo "::set-output name=description::success"
           fi
           
       - name: version-status-check
         uses: Sibz/github-status-action@v1
-        if: ${{ github.event_name == 'pull_request' }} && ${{ github.base_ref }} == 'main'
+        if: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' }}
         with: 
           authToken: ${{secrets.GITHUB_TOKEN}}
           context: 'version-status-check'
