@@ -33,7 +33,8 @@ jobs:
         uses: stCarolas/setup-maven@v4.3
 
       # Runs a set of commands using the runners shell
-      - name: Version check
+      - name: Verify version is not a SNAPSHOT
+        id: check-version
         if: ${{ github.event_name == 'pull_request' }} && ${{ github.base_ref }} == 'main'
         run: |
           POM_VERSION=1.0.0-SNAPSHOT
@@ -42,9 +43,22 @@ jobs:
           if (grep -q "SNAPSHOT" <<< "$POM_VERSION");
           then
             echo "SNAPSHOT version detected."
-            exit 1
+            # exit 1
+            echo "::set-output name=state::Passed"
+            echo "::set-output name=description::success"
           else
             echo "Do the tagging here"
             #git tag $POM_VERSION
             #git push origin --tags
+            echo "::set-output name=state::SNAPSHOT version detected"
+            echo "::set-output name=description::failure"
           fi
+          
+      - name: version-status-check
+        uses: Sibz/github-status-action@v1
+        with: 
+          authToken: ${{secrets.GITHUB_TOKEN}}
+          context: 'version-status-check'
+          description: ${{ steps.check-version.outputs.description }}
+          state: ${{ steps.check-version.outputs.state }}
+          sha: ${{github.event.pull_request.head.sha || github.sha}}
