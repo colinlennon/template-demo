@@ -21,31 +21,44 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
-      
-      #- name: Setup Java JDK
-      #  uses: actions/setup-java@v3.3.0
-      #  with:
-      #    distribution: 'temurin'
-      #    java-version: '11'
+      - uses: actions/checkout@v3      
+      - name: Setup Java JDK
+        uses: actions/setup-java@v3.3.0
+        with:
+          distribution: 'temurin'
+          java-version: '11'
        
-      #- name: Set up Maven
-      #  uses: stCarolas/setup-maven@v4.3
+      - name: Set up Maven
+        uses: stCarolas/setup-maven@v4.3
 
       # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
-        if: ${{ github.event_name == 'pull_request' }} && ${{ github.base_ref }} == 'main'
+      - name: Verify version is not a SNAPSHOT
+        id: check-version
+        if: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' }}
         run: |
-          #POM_VERSION=$(mvn org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate -Dexpression=project.version -q -DforceStdout)
-          POM_VERSION=1.0.0-SNAPSHOT
+          POM_VERSION=1.0.0
           echo "POM_VERSION: $POM_VERSION"
           echo "github.base_ref: ${{ github.base_ref }}"
           if (grep -q "SNAPSHOT" <<< "$POM_VERSION");
           then
             echo "SNAPSHOT version detected."
-            exit 1
+            # exit 1
+            echo "::set-output name=state::failure"
+            echo "::set-output name=description::SNAPSHOT version detected"
           else
             echo "Do the tagging here"
             #git tag $POM_VERSION
-            #git push origin --tags
+            #git push origin --tags            
+            echo "::set-output name=state::success"
+            echo "::set-output name=description::Version is not a SNAPSHOT"
           fi
+          
+      - name: version-status-check
+        uses: Sibz/github-status-action@v1
+        if: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' }}
+        with: 
+          authToken: ${{secrets.GITHUB_TOKEN}}
+          context: 'version-status-check'
+          description: ${{ steps.check-version.outputs.description }}
+          state: ${{ steps.check-version.outputs.state }}
+          sha: ${{github.event.pull_request.head.sha || github.sha}}
